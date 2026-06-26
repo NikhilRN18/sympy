@@ -14,7 +14,7 @@ from sympy.abc import w, x, y, z
 from sympy.core.relational import Eq, Ne
 from sympy.functions.elementary.piecewise import Piecewise
 from sympy.matrices.expressions.matexpr import MatrixSymbol
-from sympy.functions.elementary.integers import floor, ceiling
+from sympy.functions.elementary.integers import floor, ceiling, frac
 from sympy.functions.special.delta_functions import Heaviside
 
 from sympy.testing.pytest import raises, slow
@@ -340,6 +340,28 @@ def test_floor_ceiling():
 
     assert refine(floor(floor(x)+ floor(y))) == floor(x) + floor(y)
     assert refine(ceiling(ceiling(x) - ceiling(y))) == ceiling(x) - ceiling(y)
+
+
+def test_frac():
+    # integer argument -> 0
+    assert refine(frac(x), Q.integer(x)) == 0
+    assert refine(frac(2*x), Q.integer(x)) == 0
+
+    # integer terms can be dropped (frac is 1-periodic)
+    assert refine(frac(x + y), Q.integer(x)) == frac(y)
+    assert refine(frac(x + y), Q.integer(y)) == frac(x)
+    assert refine(frac(x + 2*y), Q.integer(x)) == frac(2*y)
+    assert refine(frac(x + y + z), Q.integer(x) & Q.integer(y)) == frac(z)
+    assert refine(frac(x + y + z), Q.integer(x) & Q.integer(z)) == frac(y)
+
+    # floor/ceiling subterms are integers and can be dropped
+    assert refine(frac(x + floor(y))) == frac(x)
+    assert refine(frac(ceiling(x) + y)) == frac(y)
+
+    # no simplification when nothing is known to be an integer
+    assert refine(frac(x)) == frac(x)
+    assert refine(frac(x), Q.real(x)) == frac(x)
+    assert refine(frac(x + y), Q.real(x)) == frac(x + y)
 
 
 def test_Heaviside():

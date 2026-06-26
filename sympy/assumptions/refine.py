@@ -602,6 +602,49 @@ def refine_floor_ceiling(expr, assumptions):
     return expr
 
 
+def refine_frac(expr, assumptions):
+    """
+    Handler for the fractional part function.
+
+    Explanation
+    ===========
+
+    The fractional part is ``frac(x) = x - floor(x)``. It is periodic with
+    period ``1``, so any integer term of the argument can be dropped:
+    ``frac(x + n) = frac(x)`` whenever ``n`` is an integer. In particular,
+    ``frac(x) = 0`` when ``x`` is an integer.
+
+    Examples
+    ========
+
+    >>> from sympy import Symbol, refine, Q, frac
+    >>> x = Symbol('x')
+    >>> y = Symbol('y')
+    >>> refine(frac(x), Q.integer(x))
+    0
+    >>> refine(frac(x + y), Q.integer(x))
+    frac(y)
+    >>> refine(frac(x + 2*y), Q.integer(x))
+    frac(2*y)
+    """
+    from sympy.functions.elementary.integers import floor, ceiling
+    arg = expr.args[0]
+    if ask(Q.integer(arg), assumptions):
+        return S.Zero
+
+    if isinstance(arg, Add):
+        integer_terms = []
+        other_terms = []
+        for term in arg.args:
+            if ask(Q.integer(term), assumptions) or isinstance(term, (floor, ceiling)):
+                integer_terms.append(term)
+            else:
+                other_terms.append(term)
+        if integer_terms:
+            return expr.func(Add(*other_terms))
+    return expr
+
+
 handlers_dict: dict[str, Callable[[Basic, Boolean | bool], Expr]] = {
     'Abs': refine_abs,
     'Pow': refine_Pow,
@@ -617,4 +660,5 @@ handlers_dict: dict[str, Callable[[Basic, Boolean | bool], Expr]] = {
     'Heaviside': refine_Heaviside,
     'floor': refine_floor_ceiling,
     'ceiling' : refine_floor_ceiling,
+    'frac': refine_frac,
 }
